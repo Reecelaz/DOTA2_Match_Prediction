@@ -35,9 +35,6 @@ class DotA_Data:
                 if df_temp_match is not None:
                     df_full_matches.append(df_temp_match)
                     totalMatches += 1
-                    print(df_temp_match)
-                    print("######################################")
-                    #df_full_matches = pd.concat([df_full_matches, df_temp_match], ignore_index=True)
 
         with open('DotA_data.json', 'w') as json_file:
             json.dump(df_full_matches, json_file, indent=4)
