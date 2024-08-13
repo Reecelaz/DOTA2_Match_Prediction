@@ -48,6 +48,39 @@ class DotA_Data:
         else:
             return None
 
+    def flattenDataframe(self):
+        with open('DotA_data.json') as f:
+            data = json.load(f)
+
+        # Create a list to store flattened data
+        flattened_data = []
+
+        for match in data:
+            for player in match['players']:
+                flat_player = {}
+                
+                # Flatten the player fields
+                for key, value in player.items():
+                    if isinstance(value, dict):  # Handle nested dictionaries
+                        for subkey, subvalue in value.items():
+                            if isinstance(subvalue, dict):  # Handle benchmarks
+                                for sub_subkey, sub_subvalue in subvalue.items():
+                                    flat_player[f"{key}_{subkey}_{sub_subkey}"] = sub_subvalue
+                            else:
+                                flat_player[f"{key}_{subkey}"] = subvalue
+                    elif isinstance(value, list):  # Handle lists
+                        for i, subvalue in enumerate(value):
+                            flat_player[f"{key}_{i}"] = subvalue
+                    else:
+                        flat_player[key] = value
+                        
+                flattened_data.append(flat_player)
+
+        # Convert to DataFrame
+        data_df = pd.DataFrame(flattened_data)
+        return data_df
+
+
     def jsonToDataframe(self):
         data_df = pd.read_json('C:/Users/Reece Lazarus/DOTA2_Match_Prediction/DotA_data.json')
         return data_df
