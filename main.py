@@ -16,6 +16,6 @@ def main():
     '''
     nn = DotA_NN()
     nn.train(full_matches_df)
-
+    
 if __name__ == "__main__":
     main()
