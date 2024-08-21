@@ -47,53 +47,33 @@ class DotA_Data:
             return response.json()
         else:
             return None
+            
+    def flatten_dictionary(self, d, parent_key='', sep='_'):
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self.flatten_dictionary(v, new_key, sep=sep).items())
+            elif isinstance(v, list) and all(isinstance(i, dict) for i in v):
+                for idx, item in enumerate(v):
+                    items.extend(self.flatten_dictionary(item, f"{new_key}{sep}{idx}", sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
 
     def flattenDataframe(self):
         with open('DotA_data.json') as f:
             data = json.load(f)
         
-        flattened_data = []
-
+        # Process each match and flatten it
+        flattened_matches = []
         for match in data:
-            # Start with the match-level data
-            match_flat = {k: v for k, v in match.items() if k not in ['players', 'picks_bans', 'od_data']}
-            
-            # Flatten picks_bans
-            if 'picks_bans' in match:
-                picks_bans = match['picks_bans']
-                for i, pick_ban in enumerate(picks_bans):
-                    for key, value in pick_ban.items():
-                        match_flat[f'picks_bans_{i}_{key}'] = value
+            flattened_match = self.flatten_dictionary(match)
+            flattened_matches.append(flattened_match)
 
-            # Flatten od_data
-            if 'od_data' in match and isinstance(match['od_data'], dict):
-                for key, value in match['od_data'].items():
-                    match_flat[f'od_data_{key}'] = value
-            
-            # Flatten players
-            if 'players' in match:
-                players = match['players']
-                for i, player in enumerate(players):
-                    player_flat = match_flat.copy()  # Copy match-level data
-                    for key, value in player.items():
-                        if isinstance(value, list):
-                            for j, item in enumerate(value):
-                                player_flat[f'{key}_{j}'] = item
-                        elif isinstance(value, dict):
-                            for sub_key, sub_value in value.items():
-                                if isinstance(sub_value, dict):
-                                    for sub_sub_key, sub_sub_value in sub_value.items():
-                                        player_flat[f'{key}_{sub_key}_{sub_sub_key}'] = sub_sub_value
-                                else:
-                                    player_flat[f'{key}_{sub_key}'] = sub_value
-                        else:
-                            player_flat[f'{key}'] = value
-                    
-                    flattened_data.append(player_flat)
-
-        # Convert to DataFrame
-        data_df = pd.DataFrame(flattened_data)
-        return data_df
+        # Convert the list of flattened matches into a DataFrame (if needed)
+        df = pd.DataFrame(flattened_matches)
+        return df
 
 
     def jsonToDataframe(self):

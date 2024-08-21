@@ -12,7 +12,6 @@ def main():
     '''
     with open('flattened_dota_data.json', 'w') as json_file:
         json.dump(full_matches_df, json_file, indent=4)
-   
     '''
     nn = DotA_NN()
     nn.train(full_matches_df)
