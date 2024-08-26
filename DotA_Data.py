@@ -23,7 +23,7 @@ class DotA_Data:
 
     def getData(self, no_matches):
         json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/data.json'
-        df_full_matches = []
+        full_matches = []
         
         totalMatches = 0
         while(totalMatches < no_matches):
@@ -33,12 +33,14 @@ class DotA_Data:
             for match_id in df_matches.match_id:
                 df_temp_match = self.getMatchData(match_id)
                 if df_temp_match is not None:
-                    df_full_matches.append(df_temp_match)
-                    totalMatches += 1
+                    if(df_temp_match['game_mode'] == 22 or df_temp_match['game_mode'] == 1):
+                        if(df_temp_match['lobby_type'] == 7 or df_temp_match['lobby_type'] == 6 or df_temp_match['lobby_type'] == 5):
+                            full_matches.append(df_temp_match)
+                            totalMatches += 1
 
         with open('DotA_data.json', 'w') as json_file:
-            json.dump(df_full_matches, json_file, indent=4)
-        return df_full_matches
+            json.dump(full_matches, json_file, indent=4)
+        return full_matches
     
     def getMatchData(self, match_id):
         url = f"https://api.opendota.com/api/matches/{match_id}"

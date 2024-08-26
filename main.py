@@ -5,16 +5,20 @@ import json
 
 def main():
     features = ["match_id", "radiant_win"]
-    no_matches = 2
+    no_matches = 1
 
     matches = DotA_Data(features)
     full_matches_df = matches.flattenDataframe()
+
+    temp_matches = matches.getData(no_matches)
+    with open('temp_matches.json', 'w') as json_file:
+        json.dump(temp_matches, json_file, indent=4)
     '''
     with open('flattened_dota_data.json', 'w') as json_file:
         json.dump(full_matches_df, json_file, indent=4)
     '''
     nn = DotA_NN()
-    nn.train(full_matches_df)
+    #nn.train(full_matches_df)
     
 if __name__ == "__main__":
     main()

@@ -14,14 +14,12 @@ class DotA_NN:
     def preprocess_data(self, data_df):
         # Assuming 'radiant_win' is the label and the rest are features
         X = data_df.drop(columns=['radiant_win'])
+        #X = data_df['']
         y = data_df['radiant_win']
         
         # Convert to numpy arrays
         X = X.values
         y = y.values
-
-        # Normalize feature data (if needed)
-        X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
         
         return X, y
 
