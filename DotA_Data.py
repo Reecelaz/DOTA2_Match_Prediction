@@ -82,7 +82,6 @@ class DotA_Data:
         return flattened_matches
 
 
-    def jsonToDataframe(self):
-        data_df = pd.read_json('C:/Users/Reece Lazarus/DOTA2_Match_Prediction/DotA_data.json')
-        #data_df = pd.read_json('/home-mscluster/rlazarus/DotA_data.json')
+    def jsonToDataframe(self, path):
+        data_df = pd.read_json(path)
         return data_df
