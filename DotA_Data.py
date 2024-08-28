@@ -22,7 +22,6 @@ class DotA_Data:
             return
 
     def getData(self, no_matches):
-        json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/data.json'
         full_matches = []
         
         totalMatches = 0
@@ -49,11 +48,16 @@ class DotA_Data:
             return response.json()
         else:
             return None
-            
+
     def flatten_dictionary(self, d, parent_key='', sep='_'):
         items = []
         for k, v in d.items():
             new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            
+            # Skip flattening 'radiant_win' for players, but keep it at the match level
+            if parent_key.startswith('players') and k == 'radiant_win':
+                continue
+            
             if isinstance(v, dict):
                 items.extend(self.flatten_dictionary(v, new_key, sep=sep).items())
             elif isinstance(v, list) and all(isinstance(i, dict) for i in v):
@@ -75,9 +79,10 @@ class DotA_Data:
 
         # Convert the list of flattened matches into a DataFrame (if needed)
         df = pd.DataFrame(flattened_matches)
-        return df
+        return flattened_matches
 
 
     def jsonToDataframe(self):
         data_df = pd.read_json('C:/Users/Reece Lazarus/DOTA2_Match_Prediction/DotA_data.json')
+        #data_df = pd.read_json('/home-mscluster/rlazarus/DotA_data.json')
         return data_df
