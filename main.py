@@ -21,11 +21,11 @@ def main():
     '''
     json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
     matches_df = matches.jsonToDataframe(json_file_path)
-
+    print("Total matches in dataset: ", matches_df.shape[0])
 
     ################## Hyperparameters ###################
     train_size = 0.6
-    epochs = 2
+    epochs = 100
     batch_size = 24
     
     ######################################################

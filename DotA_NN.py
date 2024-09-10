@@ -80,13 +80,13 @@ class DotA_NN:
         return X_train, y_train, X_val, y_val, X_test, y_test
 
     def build_model(self, input_size):
-        # Build the model within the strategy scope
+        hidden_layer_fn = 'relu'
         with self.strategy.scope():
             model = Sequential([
-                Dense(64, input_dim=input_size, activation='relu'),
-                Dense(64, activation='relu'),
-                Dense(64, activation='relu'),
-                Dense(64, activation='relu'),
+                Dense(64, input_dim=input_size, activation=hidden_layer_fn),
+                Dense(64, activation=hidden_layer_fn),
+                Dense(64, activation=hidden_layer_fn),
+                Dense(64, activation=hidden_layer_fn),
                 Dense(1, activation='sigmoid')
             ])
             
