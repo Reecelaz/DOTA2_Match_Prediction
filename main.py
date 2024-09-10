@@ -3,6 +3,7 @@ from DotA_NN import DotA_NN
 from pprint import pprint
 import json
 import pandas as pd
+import numpy as np
 
 def main():
     features = ["match_id", "radiant_win"]
@@ -21,9 +22,15 @@ def main():
     json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
     matches_df = matches.jsonToDataframe(json_file_path)
 
-    nn = DotA_NN()
-    nn.train(matches_df)
+
+    ################## Hyperparameters ###################
+    train_size = 0.6
+    epochs = 2
+    batch_size = 24
     
+    ######################################################
+    nn = DotA_NN()
+    nn.train(matches_df, train_size, epochs, batch_size)
 
 if __name__ == "__main__":
     main()
