@@ -22,6 +22,31 @@ class DotA_NN:
 
     
     def one_hot_encode_heroes(self, X):
+        '''
+        hero_ids_radiant = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id']
+        hero_ids_dire = ['players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id']
+
+        encoded_features = pd.DataFrame(index=X.index)
+
+        # Iterate over each hero_id column
+        for hero_id_col in hero_id_columns:
+            # Extract the column and reshape it to a 2D array
+            hero_id_values = X[[hero_id_col]]
+            
+            # Create and fit a new encoder for this column
+            encoder = OneHotEncoder(categories=[range(1, 139)], sparse_output=False, handle_unknown='ignore')
+            one_hot_encoded = encoder.fit_transform(hero_id_values)
+            
+            # Create a DataFrame with the encoded values
+            one_hot_encoded_df = pd.DataFrame(one_hot_encoded, index=X.index)
+            
+            # Rename columns to identify which hero ID they belong to
+            one_hot_encoded_df.columns = [f"{hero_id_col}_hero_{i+1}" for i in range(one_hot_encoded_df.shape[1])]
+            
+            # Concatenate the encoded features with the original DataFrame
+            encoded_features = pd.concat([encoded_features, one_hot_encoded_df], axis=1)
+        
+        '''
         hero_id_columns = [col for col in self.input_variables if 'hero_id' in col]
         
         # Initialize an empty DataFrame to store encoded features
@@ -44,6 +69,7 @@ class DotA_NN:
             
             # Concatenate the encoded features with the original DataFrame
             encoded_features = pd.concat([encoded_features, one_hot_encoded_df], axis=1)
+        
 
         # Include the non-hero ID features (e.g., 'isRadiant' columns)
         non_hero_columns = [col for col in self.input_variables if 'hero_id' not in col]
@@ -79,7 +105,7 @@ class DotA_NN:
         
         return X_train, y_train, X_val, y_val, X_test, y_test
 
-    def build_model(self, input_size):
+    def build_model(self, input_size, learning_rate=0.001):
         hidden_layer_fn = 'relu'
         with self.strategy.scope():
             model = Sequential([
@@ -90,7 +116,7 @@ class DotA_NN:
                 Dense(1, activation='sigmoid')
             ])
             
-            model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+            model.compile(optimizer=Adam(learning_rate=learning_rate), loss='binary_crossentropy', metrics=['accuracy'])
 
         return model
     
@@ -101,13 +127,13 @@ class DotA_NN:
         plt.xlabel('epoch')
         plt.show()
 
-    def train(self, data_df, train_size, epochs, batch_size):
+    def train(self, data_df, train_size, epochs, batch_size, learning_rate):
         X_train, y_train, X_val, y_val, X_test, y_test = self.preprocess_data(data_df, train_size)
         
-        model = self.build_model(X_train.shape[1])
+        model = self.build_model(X_train.shape[1], learning_rate)
         
         model_history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_val, y_val))
-        #model.summary()
+        #model_history = model.fit(X_train, y_train, epochs=epochs, validation_data=(X_val, y_val))
 
         # Save the model
         model.save('dota_nn_model.keras')
