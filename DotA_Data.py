@@ -3,26 +3,15 @@ import requests
 import json
 import os
 
+from config import API_KEY
+
+# Use the API key in a URL
+#base_url = f"https://api.example.com/data?apikey={API_KEY}"
+
 class DotA_Data:
-    '''
     def getMatchIDs(self):
         min_rank = 70
-        public_matches_endpoint = f"http://api.opendota.com/api/publicMatches?min_rank={min_rank}"
-
-        response = requests.get(public_matches_endpoint)
-
-        # Check if the request was successful
-        if response.status_code == 200:
-            # Parse the JSON response
-            public_matches_data = response.json()
-            return public_matches_data
-        else:
-            print(f"Failed to retrieve data: {response.status_code}")
-            return
-    '''
-    def getMatchIDs(self):
-        min_rank = 70
-        public_matches_endpoint = f"http://api.opendota.com/api/publicMatches?min_rank={min_rank}"
+        public_matches_endpoint = f"http://api.opendota.com/api/publicMatches?min_rank={min_rank}&api_key={API_KEY}"
 
         try:
             response = requests.get(public_matches_endpoint)
@@ -34,7 +23,7 @@ class DotA_Data:
             return None
     
     def getMatchData(self, match_id):
-        matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}"
+        matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}?api_key={API_KEY}"
         try:
             response = requests.get(matches_endpoint)
             response.raise_for_status()
@@ -44,6 +33,63 @@ class DotA_Data:
             print(f"Error retrieving matches data: {e}")
             return None
 
+    def listToJson(self, full_matches, fileName='DotA_data.json'):
+        with open(fileName, 'w') as json_file:
+            json.dump(full_matches, json_file, indent=4)
+    
+
+    def getData(self, no_matches):
+        full_matches = []
+        processed_match_ids = set()  # To store already processed match_id values
+        match_api_calls = 0  # To count how many matches were skipped consecutively
+        max_match_api_calls = 200  # Threshold to break the loop after 1000 calls without updating match data
+        
+        totalMatches = 0
+        while totalMatches < no_matches:
+            temp_match_ids = self.getMatchIDs()
+            match_api_calls += 1
+            if temp_match_ids is None:
+                break
+
+            df_matches = pd.DataFrame(temp_match_ids)
+
+            for match_id in df_matches.match_id:
+                if match_api_calls >= max_match_api_calls:
+                    print(f"Terminating loop after {match_api_calls} without new matches found")
+                    print("Matches in dataset: ", totalMatches)
+                    self.listToJson(full_matches=full_matches, fileName='DotA_data.json')
+                    return full_matches                    
+                
+                # Check if match_id is already processed
+                if match_id in processed_match_ids:
+                    continue  # Skip this match_id as it's already processed
+                
+
+                # Fetch the match data
+                df_temp_match = self.getMatchData(match_id)
+                if df_temp_match is not None:
+                    if df_temp_match['game_mode'] in [22, 1]:
+                        if df_temp_match['lobby_type'] in [7, 6, 5]:
+                            full_matches.append(df_temp_match)
+                            processed_match_ids.add(match_id)  # Mark match_id as processed
+                            match_api_calls = 0  # Reset call counter if a new match_id is found
+
+                            totalMatches += 1
+                            if(totalMatches%1000 == 0):
+                                print("Current matches found", totalMatches)
+                else:
+                    break
+
+            if(no_matches - totalMatches < 20):
+                self.listToJson(full_matches=full_matches, fileName='DotA_data.json')
+                print("Matches in dataset: ", totalMatches)
+                return full_matches
+
+        self.listToJson(full_matches=full_matches, fileName='DotA_data.json')
+        print("Matches in dataset: ", totalMatches)
+        return full_matches
+
+    '''
     def getData(self, no_matches):
         full_matches = []
         
@@ -68,6 +114,7 @@ class DotA_Data:
         with open('DotA_data.json', 'w') as json_file:
             json.dump(full_matches, json_file, indent=4)
         return full_matches
+    '''
 
     def flatten_dictionary(self, d, parent_key='', sep='_'):
         items = []
@@ -97,8 +144,7 @@ class DotA_Data:
             flattened_match = self.flatten_dictionary(match)
             flattened_matches.append(flattened_match)
 
-        # Convert the list of flattened matches into a DataFrame (if needed)
-        df = pd.DataFrame(flattened_matches)
+        self.listToJson(flattened_matches, 'flattened_dota_data.json')
         return flattened_matches
 
 

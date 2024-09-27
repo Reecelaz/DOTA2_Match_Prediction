@@ -6,17 +6,13 @@ import pandas as pd
 import numpy as np
 
 def data():
-    no_matches = 200000
+    no_matches = 2
 
     matches = DotA_Data()
     
-    temp_matches = matches.getData(no_matches)
-    with open('DotA_data.json', 'w') as json_file:
-        json.dump(temp_matches, json_file, indent=4)   
+    temp_matches = matches.getData(no_matches)  
     
-    full_matches_df = matches.flattenDataframe()
-    with open('flattened_dota_data2.json', 'w') as json_file:
-        json.dump(full_matches_df, json_file, indent=4)
+    full_matches = matches.flattenDataframe()
 
 def train():
     features = ["match_id", "radiant_win"]
@@ -35,9 +31,17 @@ def train():
     ######################################################
     nn = DotA_NN()
     nn.train(matches_df, train_size, epochs, batch_size, learning_rate)
+
+def postgreSqlExplorer():
+    no_matches = 2
+
+    sql_matches = DotA_Postgre_Data()
+
+    full_matches = sql_matches.getData(no_matches)
     
 def main():
-    data()
+    postgreSqlExplorer()
+    #data()
     #train()   
     
     
