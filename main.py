@@ -1,12 +1,13 @@
 from DotA_Data import DotA_Data
 from DotA_NN import DotA_NN
+from DotA_Postgre_Data import DotA_Postgre_Data
 from pprint import pprint
 import json
 import pandas as pd
 import numpy as np
 
 def data():
-    no_matches = 2
+    no_matches = 40560
 
     matches = DotA_Data()
     
@@ -15,8 +16,7 @@ def data():
     full_matches = matches.flattenDataframe()
 
 def train():
-    features = ["match_id", "radiant_win"]
-    matches = DotA_Data(features)
+    matches = DotA_Data()
 
     json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
     matches_df = matches.jsonToDataframe(json_file_path)
@@ -33,11 +33,13 @@ def train():
     nn.train(matches_df, train_size, epochs, batch_size, learning_rate)
 
 def postgreSqlExplorer():
-    no_matches = 2
+    no_matches = 40560
 
     sql_matches = DotA_Postgre_Data()
 
-    full_matches = sql_matches.getData(no_matches)
+    #match_ids_data = sql_matches.getMatchIDs(no_matches)
+
+    
     
 def main():
     postgreSqlExplorer()

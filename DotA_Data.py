@@ -3,7 +3,7 @@ import requests
 import json
 import os
 
-from config import API_KEY
+#from config import API_KEY
 
 # Use the API key in a URL
 #base_url = f"https://api.example.com/data?apikey={API_KEY}"
