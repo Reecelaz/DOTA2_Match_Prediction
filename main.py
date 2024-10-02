@@ -33,14 +33,15 @@ def train():
     nn.train(matches_df, train_size, epochs, batch_size, learning_rate)
 
 def postgreSqlExplorer():
-    no_matches = 2#40560
+    no_matches = 10#40560
     rate_limit = 60
+    backup_frequency = 3
 
     sql_matches = DotA_Postgre_Data()
 
     #match_ids_data = sql_matches.getMatchIDs(no_matches)
 
-    match_data = sql_matches.getData(no_matches, rate_limit)    
+    match_data = sql_matches.getData(no_matches, rate_limit, backup_frequency)    
     
 def main():
     postgreSqlExplorer()

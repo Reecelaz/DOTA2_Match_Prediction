@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import time
+import sys
 
 from config import API_KEY
 
@@ -48,19 +49,24 @@ class DotA_Postgre_Data:
         with open(fileName, 'w') as json_file:
             json.dump(full_matches, json_file, indent=4)
 
-    def getData(self, no_matches=1, rate_limit=60):
+    def getData(self, no_matches=1, rate_limit=60, backup_frequency=200):
         
         print("Fetching match_ids")
+        sys.stdout.flush()
+
         json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/postgre_match_id_data.json'
-        #json_file_path = '/home-mscluster/rlazarus/DotA_data.json/postgre_match_id_data.json'
+        #json_file_path = '/home-mscluster/rlazarus/postgre_match_id_data.json'
+        
         match_ids_df = self.jsonToDataframe(json_file_path)
 
         full_matches = []
         unique_match_ids = set()
         matches_processed = 0
         requests_made = 0
+        start_time = time.time()
 
         print("Collecting individual match data")
+        sys.stdout.flush()
 
         for index, row in match_ids_df.iterrows():
             match_id = row['match_id']
@@ -69,7 +75,9 @@ class DotA_Postgre_Data:
             if match_id in unique_match_ids:
                 continue
 
-            print(f"Processing match_id: {match_id+1}", f"; {matches_processed} / {no_matches}")
+            print(f"Processing match_id: {match_id}", f"; {matches_processed} / {no_matches}")
+            sys.stdout.flush()
+
             temp_match = self.getMatchData(match_id)
             if temp_match is not None:
                 full_matches.append(temp_match)
@@ -77,18 +85,30 @@ class DotA_Postgre_Data:
 
                 # Rate limit check
                 if requests_made >= rate_limit:
-                    print(f"Reached {rate_limit} API calls. Sleeping for 60 seconds...")
-                    time.sleep(60)  # Sleep for 60 seconds before making more requests
-                    requests_made = 0  # Reset the counter after sleeping
+                    elapsed_time = time.time() - start_time
+                    remaining_time = (60 - elapsed_time) + 2
+
+                    if remaining_time > 0:
+                        print(f"Reached {rate_limit} API calls. Sleeping for {remaining_time:.2f} seconds...")
+                        sys.stdout.flush()
+                        time.sleep(remaining_time)
+
+                    # Reset the start time and the counter after sleeping
+                    start_time = time.time()
+                    requests_made = 0
             
             # Add match_id to the set to ensure uniqueness
             unique_match_ids.add(match_id)
             
             # Increment the processed match counter
             matches_processed += 1
+
+            if matches_processed % backup_frequency == 0:
+                self.listToJson(full_matches, fileName=f'postgre_data_every_{backup_frequency}_matches.json')
             
             # Stop after processing the specified number of unique matches
             if matches_processed >= no_matches:
+                self.listToJson(full_matches, fileName='BACKUP_postgre_data.json')
                 break
 
         self.listToJson(full_matches, fileName='postgre_data.json')
@@ -99,6 +119,6 @@ class DotA_Postgre_Data:
         return full_matches
 
     # Write function to loop through match_ids and get the data for each.
-    # Dont forget rate limiting. 
+    # Dont forget rate limiting.
     # Handle errors to that if it breaks you don't lose the data. 
     # Keep the code to check for duplicate match_ids.
