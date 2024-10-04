@@ -128,13 +128,14 @@ class DotA_NN:
         plt.show()
 
     def train(self, data_df, train_size, epochs, batch_size, learning_rate):
+        print("Preprocessing data")
         X_train, y_train, X_val, y_val, X_test, y_test = self.preprocess_data(data_df, train_size)
         
         model = self.build_model(X_train.shape[1], learning_rate)
-        
+        print("Begin model training")
         model_history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_val, y_val))
         #model_history = model.fit(X_train, y_train, epochs=epochs, validation_data=(X_val, y_val))
-
+        print("Model training complete")
         # Save the model
         model.save('dota_nn_model.keras')
         print("Model training complete and saved as 'dota_nn_model.keras'")

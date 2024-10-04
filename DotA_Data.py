@@ -87,34 +87,8 @@ class DotA_Data:
 
         self.listToJson(full_matches=full_matches, fileName='DotA_data.json')
         print("Matches in dataset: ", totalMatches)
-        return full_matches
-
-    '''
-    def getData(self, no_matches):
-        full_matches = []
         
-        totalMatches = 0
-        while(totalMatches < no_matches):
-            temp_match_ids = self.getMatchIDs()
-            if(temp_match_ids is None):
-                break
-
-            df_matches = pd.DataFrame(temp_match_ids)
-
-            for match_id in df_matches.match_id:
-                df_temp_match = self.getMatchData(match_id)
-                if df_temp_match is not None:
-                    if(df_temp_match['game_mode'] == 22 or df_temp_match['game_mode'] == 1):
-                        if(df_temp_match['lobby_type'] == 7 or df_temp_match['lobby_type'] == 6 or df_temp_match['lobby_type'] == 5):
-                            full_matches.append(df_temp_match)
-                            totalMatches += 1
-                else:
-                    break
-
-        with open('DotA_data.json', 'w') as json_file:
-            json.dump(full_matches, json_file, indent=4)
         return full_matches
-    '''
 
     def flatten_dictionary(self, d, parent_key='', sep='_'):
         items = []
@@ -135,7 +109,7 @@ class DotA_Data:
         return dict(items)
 
     def flattenDataframe(self):
-        with open('DotA_data.json') as f:
+        with open('postgre_data.json') as f:
             data = json.load(f)
         
         # Process each match and flatten it
@@ -144,10 +118,46 @@ class DotA_Data:
             flattened_match = self.flatten_dictionary(match)
             flattened_matches.append(flattened_match)
 
-        self.listToJson(flattened_matches, 'flattened_dota_data.json')
+        self.listToJson(flattened_matches, 'flattened_postgre_dota_data.json')
         return flattened_matches
 
 
     def jsonToDataframe(self, path):
         data_df = pd.read_json(path)
         return data_df
+
+
+
+    def process_chunk(chunk, input_variables):
+        # Extract necessary columns from the DataFrame chunk
+        selected_columns = chunk[input_variables]
+        
+        input_variables.remove('radiant_win')
+
+        # Convert to NumPy arrays
+        features = selected_columns[input_variables].values
+        target = selected_columns['radiant_win'].values
+        
+        # Convert to TensorFlow dataset
+        dataset = tf.data.Dataset.from_tensor_slices((features, target))
+        return dataset
+
+    def getDataset(json_file_path, chunksize=10000, input_variables=[]):
+        # Initialize an empty dataset to store concatenated datasets
+        final_dataset = None
+
+        # Load and process the JSON data in chunks
+        json_file = json_file_path
+        chunks = pd.read_json(json_file, lines=True, chunksize=chunksize)  # Adjust chunksize as needed
+
+        for chunk in chunks:
+            chunk_dataset = process_chunk(chunk)
+            
+            if final_dataset is None:
+                final_dataset = chunk_dataset  # Initialize with the first chunk
+            else:
+                final_dataset = final_dataset.concatenate(chunk_dataset)  # Concatenate new chunk
+
+        # Shuffle, batch, and prefetch the dataset to optimize for training
+        final_dataset = final_dataset.shuffle(buffer_size=chunksize).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
+        return final_dataset

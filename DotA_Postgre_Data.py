@@ -5,7 +5,7 @@ import os
 import time
 import sys
 
-from config import API_KEY
+#from config import API_KEY
 
 class DotA_Postgre_Data:
     def getMatchIDs(self, no_matches=500000):
@@ -30,8 +30,8 @@ class DotA_Postgre_Data:
             return None
     
     def getMatchData(self, match_id):
-        #matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}?api_key={API_KEY}"
-        matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}"
+        matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}?api_key={API_KEY}"
+        #matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}"
         try:
             response = requests.get(matches_endpoint)
             response.raise_for_status()
@@ -54,8 +54,8 @@ class DotA_Postgre_Data:
         print("Fetching match_ids")
         sys.stdout.flush()
 
-        json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/postgre_match_id_data.json'
-        #json_file_path = '/home-mscluster/rlazarus/postgre_match_id_data.json'
+        #json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/postgre_match_id_data.json'
+        json_file_path = '/home-mscluster/rlazarus/postgre_match_id_data.json'
         
         match_ids_df = self.jsonToDataframe(json_file_path)
 
@@ -119,6 +119,6 @@ class DotA_Postgre_Data:
         return full_matches
 
     # Write function to loop through match_ids and get the data for each.
-    # Dont forget rate limiting.
+    # Dont forget rate limiting. 
     # Handle errors to that if it breaks you don't lose the data. 
     # Keep the code to check for duplicate match_ids.
