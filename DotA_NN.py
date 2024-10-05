@@ -79,31 +79,28 @@ class DotA_NN:
 
 
 
-    def preprocess_data(self, data_df, train_size = 0.6):
-        X = data_df[self.input_variables]
-        y = data_df['radiant_win']
+    def split_data(self, dataset, train_size=0.6):
+        # Get the total number of elements in the dataset
+        dataset_size = dataset.cardinality().numpy()
 
-        # Convert boolean variables to int for use with TensorFlow
-        X = X.astype({col: 'int' for col in X.select_dtypes(include='bool').columns})
-        y = y.astype('int')
+        if dataset_size == tf.data.experimental.INFINITE_CARDINALITY:
+            raise ValueError("Dataset has infinite cardinality. Make sure it is finite to split.")
 
-        X = self.one_hot_encode_heroes(X)
-        
-        # First split: train_size and temp set
-        X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=1-train_size, stratify=y, random_state=42)
-        
-        # Second split: 50% val, 50% test from the temp set
-        X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=42)
+        # Compute sizes for train, validation, and test sets
+        train_size = int(train_size * dataset_size)
+        val_test_size = dataset_size - train_size
+        val_size = test_size = val_test_size // 2
 
-        # Convert to numpy arrays
-        X_train = X_train.values
-        X_val = X_val.values
-        X_test = X_test.values
-        y_train = y_train.values
-        y_val = y_val.values
-        y_test = y_test.values
-        
-        return X_train, y_train, X_val, y_val, X_test, y_test
+        # Shuffle the dataset first to randomize
+        dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
+
+        # Split the dataset: train, validation, and test
+        train_dataset = dataset.take(train_size)
+        remaining_dataset = dataset.skip(train_size)
+        val_dataset = remaining_dataset.take(val_size)
+        test_dataset = remaining_dataset.skip(val_size)
+
+        return train_dataset, val_dataset, test_dataset
 
     def build_model(self, input_size, learning_rate=0.001):
         hidden_layer_fn = 'relu'
@@ -127,21 +124,26 @@ class DotA_NN:
         plt.xlabel('epoch')
         plt.show()
 
-    def train(self, data_df, train_size, epochs, batch_size, learning_rate):
-        print("Preprocessing data")
-        X_train, y_train, X_val, y_val, X_test, y_test = self.preprocess_data(data_df, train_size)
+    def train(self, dataset, train_size, epochs, batch_size, learning_rate):
+        print("Splitting data")
+        train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
         
-        model = self.build_model(X_train.shape[1], learning_rate)
+        # Prepare datasets for batching and prefetching
+        train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+        val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+        test_dataset = test_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+        
+        model = self.build_model(input_size=next(iter(train_dataset))[0].shape[1], learning_rate=learning_rate)
+        
         print("Begin model training")
-        model_history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_val, y_val))
-        #model_history = model.fit(X_train, y_train, epochs=epochs, validation_data=(X_val, y_val))
+        model_history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset)
+        
         print("Model training complete")
         # Save the model
         model.save('dota_nn_model.keras')
-        print("Model training complete and saved as 'dota_nn_model.keras'")
+        print("Model saved as 'dota_nn_model.keras'")
 
-        test_loss, test_accuracy = model.evaluate(X_test,  y_test, verbose = 0)
-
+        test_loss, test_accuracy = model.evaluate(test_dataset, verbose=0)
         print('\nTest accuracy:', test_accuracy)
         print('\nLoss:', test_loss)
 

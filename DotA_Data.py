@@ -128,7 +128,7 @@ class DotA_Data:
 
 
 
-    def process_chunk(chunk, input_variables):
+    def process_chunk(self, chunk, input_variables):
         # Extract necessary columns from the DataFrame chunk
         selected_columns = chunk[input_variables]
         
@@ -142,16 +142,18 @@ class DotA_Data:
         dataset = tf.data.Dataset.from_tensor_slices((features, target))
         return dataset
 
-    def getDataset(json_file_path, chunksize=10000, input_variables=[]):
+    def getDataset(self, json_file_path, chunksize=10000, input_variables=[]):
         # Initialize an empty dataset to store concatenated datasets
         final_dataset = None
+        total_rows = 0
 
         # Load and process the JSON data in chunks
-        json_file = json_file_path
-        chunks = pd.read_json(json_file, lines=True, chunksize=chunksize)  # Adjust chunksize as needed
+        chunks = pd.read_json(json_file_path, lines=True, chunksize=chunksize)  # Adjust chunksize as needed
 
         for chunk in chunks:
-            chunk_dataset = process_chunk(chunk)
+            chunk_dataset = self.process_chunk(chunk)
+
+            total_rows += chunk.shape[0]
             
             if final_dataset is None:
                 final_dataset = chunk_dataset  # Initialize with the first chunk
@@ -160,4 +162,4 @@ class DotA_Data:
 
         # Shuffle, batch, and prefetch the dataset to optimize for training
         final_dataset = final_dataset.shuffle(buffer_size=chunksize).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
-        return final_dataset
+        return final_dataset, total_rows
