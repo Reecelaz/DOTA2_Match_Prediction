@@ -2,6 +2,8 @@ import pandas as pd
 import requests
 import json
 import os
+import numpy as np
+import tensorflow as tf
 
 #from config import API_KEY
 
@@ -147,12 +149,16 @@ class DotA_Data:
         final_dataset = None
         total_rows = 0
 
-        # Load and process the JSON data in chunks
-        chunks = pd.read_json(json_file_path, lines=True, chunksize=chunksize)  # Adjust chunksize as needed
+        # Load the full JSON file at once (not line-based)
+        with open(json_file_path, 'r') as f:
+            data = json.load(f)  # Load the entire JSON as a Python object (list of matches)
 
-        for chunk in chunks:
-            chunk_dataset = self.process_chunk(chunk)
+        # Convert the loaded JSON into a DataFrame
+        df = pd.json_normalize(data)
 
+        # Split the dataframe into chunks for memory efficiency
+        for chunk in np.array_split(df, len(df) // chunksize + 1):
+            chunk_dataset = self.process_chunk(chunk, input_variables)
             total_rows += chunk.shape[0]
             
             if final_dataset is None:
