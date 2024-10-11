@@ -131,41 +131,65 @@ class DotA_Data:
 
 
     def process_chunk(self, chunk, input_variables):
+        # Create a copy of input_variables to avoid modifying the original list
+        variables = input_variables.copy()
+
+        # Extract necessary columns from the DataFrame chunk
+        selected_columns = chunk[variables]
+        
+        # Remove 'radiant_win' from the variables list for features
+        variables.remove('radiant_win')
+
+        # Convert to NumPy arrays (ensure proper numeric type)
+        features = selected_columns[variables].apply(pd.to_numeric, errors='coerce').fillna(0).astype('float32').values
+        target = selected_columns['radiant_win'].astype('int32').values  # Ensure target is integer
+
+        # Convert to TensorFlow dataset
+        dataset = tf.data.Dataset.from_tensor_slices((features, target))
+        return dataset
+
+
+        '''
         # Extract necessary columns from the DataFrame chunk
         selected_columns = chunk[input_variables]
         
         input_variables.remove('radiant_win')
 
-        # Convert to NumPy arrays
-        features = selected_columns[input_variables].values
-        target = selected_columns['radiant_win'].values
-        
+        # Convert to NumPy arrays (ensure proper numeric type)
+        features = selected_columns[input_variables].apply(pd.to_numeric, errors='coerce').fillna(0).astype('float32').values
+        target = selected_columns['radiant_win'].astype('int32').values  # Ensure target is integer
+
         # Convert to TensorFlow dataset
         dataset = tf.data.Dataset.from_tensor_slices((features, target))
         return dataset
+        '''
 
     def getDataset(self, json_file_path, chunksize=10000, input_variables=[]):
         # Initialize an empty dataset to store concatenated datasets
         final_dataset = None
         total_rows = 0
 
-        # Load the full JSON file at once (not line-based)
+        print("Loading data from json file")
         with open(json_file_path, 'r') as f:
-            data = json.load(f)  # Load the entire JSON as a Python object (list of matches)
+            data = json.load(f)  # Load the entire JSON as a list of dictionaries (matches)
 
-        # Convert the loaded JSON into a DataFrame
-        df = pd.json_normalize(data)
+        print("Processing data in chunks to build TensorFlow dataset")
+        for chunk in np.array_split(data, len(data) // chunksize + 1):
+            # Normalize the chunk of JSON data into a DataFrame
+            chunk_df = pd.json_normalize(chunk)
 
-        # Split the dataframe into chunks for memory efficiency
-        for chunk in np.array_split(df, len(df) // chunksize + 1):
-            chunk_dataset = self.process_chunk(chunk, input_variables)
-            total_rows += chunk.shape[0]
+            # Process the chunk and extract necessary columns
+            chunk_dataset = self.process_chunk(chunk_df, input_variables)
+            total_rows += chunk_df.shape[0]
             
             if final_dataset is None:
                 final_dataset = chunk_dataset  # Initialize with the first chunk
             else:
                 final_dataset = final_dataset.concatenate(chunk_dataset)  # Concatenate new chunk
+        
+        print(f"final_dataset size: {final_dataset.cardinality().numpy()}")
 
         # Shuffle, batch, and prefetch the dataset to optimize for training
-        final_dataset = final_dataset.shuffle(buffer_size=chunksize).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
+        #final_dataset = final_dataset.shuffle(buffer_size=total_rows).batch(32).prefetch(tf.data.experimental.AUTOTUNE)
+        print("Final dataset completed and shuffled")
         return final_dataset, total_rows

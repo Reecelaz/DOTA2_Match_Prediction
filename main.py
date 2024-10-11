@@ -18,8 +18,8 @@ def train():
     matches = DotA_Data()
 
     #json_file_path = '/home-mscluster/rlazarus/flattened_postgre_dota_data.json'
-    json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json' #postgre_
-    chunksize = 10000
+    json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_postgre_dota_data.json' #postgre_
+    chunksize = 500
 
     input_variables = ['radiant_win', 'players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id', 'players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 'players_9_isRadiant']
 
@@ -29,7 +29,7 @@ def train():
 
     ################## Hyperparameters ###################
     train_size = 0.65
-    epochs = 2
+    epochs = 200
     batch_size = 64
     learning_rate = 0.001
     

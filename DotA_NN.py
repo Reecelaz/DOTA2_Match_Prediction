@@ -80,6 +80,34 @@ class DotA_NN:
 
 
     def split_data(self, dataset, train_size=0.6):
+        print(f"Original dataset size: {dataset.cardinality().numpy()}")
+        # Get the total number of elements in the dataset
+        dataset_size = dataset.cardinality().numpy()
+
+        if dataset_size == 0:
+            raise ValueError("The dataset is empty")
+
+        # Compute sizes for train, validation, and test sets
+        train_size = int(train_size * dataset_size)
+        val_test_size = dataset_size - train_size
+        val_size = test_size = val_test_size // 2
+
+        # Shuffle the dataset first to randomize
+        dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
+
+        # Split the dataset: train, validation, and test
+        train_dataset = dataset.take(train_size)
+        remaining_dataset = dataset.skip(train_size)
+        val_dataset = remaining_dataset.take(val_size)
+        test_dataset = remaining_dataset.skip(val_size)
+
+        # Print sizes for verification
+        print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
+        print(f"Val dataset size: {val_dataset.cardinality().numpy()}")
+        print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
+
+        return train_dataset, val_dataset, test_dataset
+        '''
         # Get the total number of elements in the dataset
         dataset_size = dataset.cardinality().numpy()
 
@@ -101,6 +129,7 @@ class DotA_NN:
         test_dataset = remaining_dataset.skip(val_size)
 
         return train_dataset, val_dataset, test_dataset
+        '''
 
     def build_model(self, input_size, learning_rate=0.001):
         hidden_layer_fn = 'relu'
@@ -127,11 +156,24 @@ class DotA_NN:
     def train(self, dataset, train_size, epochs, batch_size, learning_rate):
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
+
+        # Check if the dataset is empty
+        print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
+        if train_dataset.cardinality().numpy() == 0:
+            raise ValueError("Train dataset is empty!")
+
+        print(f"Val dataset size: {val_dataset.cardinality().numpy()}")
+        if val_dataset.cardinality().numpy() == 0:
+            raise ValueError("Train dataset is empty!")
+
+        print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
+        if test_dataset.cardinality().numpy() == 0:
+            raise ValueError("Train dataset is empty!")
         
         # Prepare datasets for batching and prefetching
-        train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
-        val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
-        test_dataset = test_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+        train_dataset = train_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
+        val_dataset = val_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
+        test_dataset = test_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
         
         model = self.build_model(input_size=next(iter(train_dataset))[0].shape[1], learning_rate=learning_rate)
         
