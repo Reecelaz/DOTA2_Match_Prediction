@@ -29,7 +29,7 @@ def train():
 
     ################## Hyperparameters ###################
     train_size = 0.65
-    epochs = 200
+    epochs = 10
     batch_size = 64
     learning_rate = 0.001
     
