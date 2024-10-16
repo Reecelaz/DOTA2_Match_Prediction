@@ -156,7 +156,7 @@ class DotA_NN:
         plt.title('model accuracy')
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
-        plt.show()
+        plt.savefig('accuracy_vs_epochs.png')
 
     def process_teams_and_one_hot_encode(self, features, hero_id_columns, is_radiant_columns, num_heroes=140):
         # Separate Radiant and Dire teams
@@ -240,5 +240,19 @@ class DotA_NN:
         test_loss, test_accuracy = model.evaluate(test_dataset, verbose=0)
         print('\nTest accuracy:', test_accuracy)
         print('\nLoss:', test_loss)
+
+        precision_metric = tf.keras.metrics.Precision()
+        for features, labels in test_dataset:
+            predictions = model.predict(features)
+            precision_metric.update_state(labels, predictions)
+        precision = precision_metric.result().numpy()
+        print('\nPrecision:', precision)
+
+        auc_metric = tf.keras.metrics.AUC()
+        for features, labels in test_dataset:
+            predictions = model.predict(features)
+            auc_metric.update_state(labels, predictions)
+        roc_auc = auc_metric.result().numpy()
+        print('\nROC AUC:', roc_auc)
 
         self.plot_accuracy_vs_epochs(model_history)
