@@ -107,29 +107,6 @@ class DotA_NN:
         print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
 
         return train_dataset, val_dataset, test_dataset
-        '''
-        # Get the total number of elements in the dataset
-        dataset_size = dataset.cardinality().numpy()
-
-        if dataset_size == tf.data.experimental.INFINITE_CARDINALITY:
-            raise ValueError("Dataset has infinite cardinality. Make sure it is finite to split.")
-
-        # Compute sizes for train, validation, and test sets
-        train_size = int(train_size * dataset_size)
-        val_test_size = dataset_size - train_size
-        val_size = test_size = val_test_size // 2
-
-        # Shuffle the dataset first to randomize
-        dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
-
-        # Split the dataset: train, validation, and test
-        train_dataset = dataset.take(train_size)
-        remaining_dataset = dataset.skip(train_size)
-        val_dataset = remaining_dataset.take(val_size)
-        test_dataset = remaining_dataset.skip(val_size)
-
-        return train_dataset, val_dataset, test_dataset
-        '''
 
     def build_model(self, input_size, learning_rate=0.001):
         hidden_layer_fn = 'relu'
@@ -156,7 +133,7 @@ class DotA_NN:
         plt.title('model accuracy')
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
-        plt.savefig('accuracy_vs_epochs.png')
+        plt.savefig('NN accuracy_vs_epochs.png')
 
     def process_teams_and_one_hot_encode(self, features, hero_id_columns, is_radiant_columns, num_heroes=140):
         # Separate Radiant and Dire teams
@@ -194,6 +171,25 @@ class DotA_NN:
         
         return encoded_dataset
 
+    def inspect_first_row(self, dataset, output_file='first_row.txt'):
+        # Take the first element from the dataset
+        first_row = next(iter(dataset.take(1)))
+        
+        features, label = first_row  # Unpack the features and the label
+        
+        # Convert the Tensors to NumPy arrays for easier reading
+        features_np = features.numpy()
+        label_np = label.numpy()
+
+        # Write the values to a text file
+        with open(output_file, 'w') as f:
+            f.write("Features (X):\n")
+            np.savetxt(f, features_np, fmt='%s')
+            f.write("\nLabel (y):\n")
+            f.write(f"{label_np}\n")
+
+        print(f"First row saved to {output_file}")
+
     def train(self, dataset, train_size, epochs, batch_size, learning_rate):
         print("Encoding hero columns")
 
@@ -205,6 +201,9 @@ class DotA_NN:
         'players_9_isRadiant']
 
         dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
+
+        # Storing first row in text file
+        self.inspect_first_row(dataset, output_file='first_row.txt')
 
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
