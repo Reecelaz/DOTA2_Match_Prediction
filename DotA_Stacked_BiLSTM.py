@@ -14,7 +14,7 @@ class DotA_Stacked_BiLSTM:
         # Set up the strategy for multi-GPU support
         self.strategy = tf.distribute.MirroredStrategy()
         print('Number of devices: {}'.format(self.strategy.num_replicas_in_sync))
-
+    '''
     def build_model(self, input_size):
         with self.strategy.scope():
             # Build the Stacked Bidirectional LSTM Model with dynamic input dimensions
@@ -43,6 +43,35 @@ class DotA_Stacked_BiLSTM:
         model.summary()
 
         return model
+    '''
+    def build_model(self, input_shape):
+        with self.strategy.scope():
+            model = Sequential()
+
+            # Add a Dense layer to reduce input dimensions (e.g., 64 units)
+            model.add(Dense(64, activation='relu', input_shape=input_shape))
+
+            # Add first Bidirectional LSTM layer
+            model.add(Bidirectional(LSTM(64, return_sequences=True)))
+            model.add(Dropout(0.2))
+
+            # Add second Bidirectional LSTM layer, with return_sequences=False for single output
+            model.add(Bidirectional(LSTM(64, return_sequences=False)))  # No need to keep sequence data here
+            model.add(Dropout(0.2))
+
+            # Final Dense layer for binary classification
+            model.add(Dense(1, activation='sigmoid'))  # Single sigmoid output
+
+            # Compile the model
+            model.compile(optimizer='adam',
+                        loss='binary_crossentropy',
+                        metrics=['accuracy'])
+
+        # Print the model summary
+        model.summary()
+
+        return model
+
 
     def split_data(self, dataset, train_size=0.6):
         print(f"Original dataset size: {dataset.cardinality().numpy()}")
@@ -148,9 +177,10 @@ class DotA_Stacked_BiLSTM:
         train_dataset = train_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
         val_dataset = val_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
         test_dataset = test_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
-        print("THIS SHAPE IS!!!!!")
-        print(next(iter(train_dataset))[0].shape[1])
-        model = self.build_model(input_size=next(iter(train_dataset))[0].shape[1])
+
+        input_shape = next(iter(train_dataset))[0].shape[1:]
+        print(f"Dynamically inferred input shape: {input_shape}")
+        model = self.build_model(input_shape=input_shape)
 
         model_history = model.fit(train_dataset, validation_data=val_dataset, epochs=epochs)
 
