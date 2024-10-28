@@ -54,10 +54,9 @@ def train_BiLSTM():
     print(f"Total matches in the dataset: {total_rows}")
 
     ################## NN Hyperparameters ################
-    train_size = 0.2
+    train_size = 0.6
     epochs = 20
     batch_size = 20
-    learning_rate = 0.001
     
     ######################################################
     lstm = DotA_Stacked_BiLSTM()
@@ -72,13 +71,24 @@ def postgreSqlExplorer():
 
     #match_ids_data = sql_matches.getMatchIDs(no_matches)
 
-    match_data = sql_matches.getData(no_matches, rate_limit, backup_frequency)   
+    match_data = sql_matches.getData(no_matches, rate_limit, backup_frequency)
+
+def evaluateModel():
+    model = tf.keras.models.load_model('dota_nn_model.keras')   
+    # Assume test_dataset is a tf.data.Dataset object with batched test data
+    test_loss, test_accuracy = model.evaluate(test_dataset, verbose=1)
+    print(f'Test Accuracy: {test_accuracy}')
+    print(f'Test Loss: {test_loss}')
+
+
+
     
 def main():
     #postgreSqlExplorer()
     #data()
     #train_NN()
     train_BiLSTM()
+    #evaluateModel()
     
     
 if __name__ == "__main__":

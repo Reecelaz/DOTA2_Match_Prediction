@@ -7,6 +7,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 class DotA_Stacked_BiLSTM:
 
@@ -45,6 +46,7 @@ class DotA_Stacked_BiLSTM:
         return model
     '''
     def build_model(self, input_shape):
+        '''
         with self.strategy.scope():
             model = Sequential()
 
@@ -61,6 +63,33 @@ class DotA_Stacked_BiLSTM:
 
             # Final Dense layer for binary classification
             model.add(Dense(1, activation='sigmoid'))  # Single sigmoid output
+
+            # Compile the model
+            model.compile(optimizer='adam',
+                        loss='binary_crossentropy',
+                        metrics=['accuracy'])
+
+        # Print the model summary
+        model.summary()
+
+        return model
+        '''
+        with self.strategy.scope():
+            model = Sequential()
+
+            # Use LSTM units that match the input feature size dynamically
+            input_feature_size = input_shape[-1]  # Get the feature dimension from the input shape
+
+            # Add first Bidirectional LSTM layer with units matching input feature size
+            model.add(Bidirectional(LSTM(input_feature_size, return_sequences=True), input_shape=input_shape))
+            model.add(Dropout(0.01))
+
+            # Add second Bidirectional LSTM layer
+            model.add(Bidirectional(LSTM(input_feature_size, return_sequences=False)))  # No need to keep sequence data here
+            model.add(Dropout(0.01))
+
+            # Final Dense layer for binary classification
+            model.add(Dense(1, activation='sigmoid'))  # Single sigmoid output for binary classification
 
             # Compile the model
             model.compile(optimizer='adam',
