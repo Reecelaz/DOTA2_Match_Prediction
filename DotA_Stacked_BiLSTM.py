@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class DotA_Stacked_BiLSTM:
 
     def __init__(self):
@@ -46,34 +47,6 @@ class DotA_Stacked_BiLSTM:
         return model
     '''
     def build_model(self, input_shape):
-        '''
-        with self.strategy.scope():
-            model = Sequential()
-
-            # Add a Dense layer to reduce input dimensions (e.g., 64 units)
-            model.add(Dense(64, activation='relu', input_shape=input_shape))
-
-            # Add first Bidirectional LSTM layer
-            model.add(Bidirectional(LSTM(64, return_sequences=True)))
-            model.add(Dropout(0.2))
-
-            # Add second Bidirectional LSTM layer, with return_sequences=False for single output
-            model.add(Bidirectional(LSTM(64, return_sequences=False)))  # No need to keep sequence data here
-            model.add(Dropout(0.2))
-
-            # Final Dense layer for binary classification
-            model.add(Dense(1, activation='sigmoid'))  # Single sigmoid output
-
-            # Compile the model
-            model.compile(optimizer='adam',
-                        loss='binary_crossentropy',
-                        metrics=['accuracy'])
-
-        # Print the model summary
-        model.summary()
-
-        return model
-        '''
         with self.strategy.scope():
             model = Sequential()
 
@@ -96,11 +69,34 @@ class DotA_Stacked_BiLSTM:
                         loss='binary_crossentropy',
                         metrics=['accuracy'])
 
-        # Print the model summary
-        model.summary()
 
         return model
 
+    def split_data(self, dataset, train_ratio=0.6, seed=42):
+        val_ratio = test_ratio = (1 - train_ratio) / 2
+        # Ensure ratios add up to 1.0
+        assert train_ratio + val_ratio + test_ratio == 1.0, "Ratios must sum to 1.0"
+        
+        # Calculate dataset size
+        dataset_size = dataset.cardinality().numpy()
+        
+        # Compute sizes based on ratios
+        train_size = int(train_ratio * dataset_size)
+        val_size = int(val_ratio * dataset_size)
+
+        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
+        
+        # Shuffle with a fixed seed for reproducibility
+        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=seed, reshuffle_each_iteration=True)
+        
+        # Create splits
+        train_dataset = dataset.take(train_size)
+        val_dataset = dataset.skip(train_size).take(val_size)
+        test_dataset = dataset.skip(train_size + val_size)
+        
+        return train_dataset, val_dataset, test_dataset
+    '''
+    #Original Split Function
 
     def split_data(self, dataset, train_size=0.6):
         print(f"Original dataset size: {dataset.cardinality().numpy()}")
@@ -130,7 +126,7 @@ class DotA_Stacked_BiLSTM:
         print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
 
         return train_dataset, val_dataset, test_dataset
-
+    '''
     def process_teams_and_one_hot_encode(self, features, hero_id_columns, is_radiant_columns, num_heroes=140):
         # Separate Radiant and Dire teams
         radiant_hero_ids = []
@@ -184,10 +180,13 @@ class DotA_Stacked_BiLSTM:
         'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 
         'players_9_isRadiant']
 
-        dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
-
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
+
+        #dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
+        train_dataset = self.create_one_hot_encoded_dataset(train_dataset, hero_id_columns, is_radiant_columns, 140)
+        val_dataset = self.create_one_hot_encoded_dataset(val_dataset, hero_id_columns, is_radiant_columns, 140)
+        test_dataset = self.create_one_hot_encoded_dataset(test_dataset, hero_id_columns, is_radiant_columns, 140)
 
         # Check if the dataset is empty
         print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
@@ -211,27 +210,28 @@ class DotA_Stacked_BiLSTM:
         print(f"Dynamically inferred input shape: {input_shape}")
         model = self.build_model(input_shape=input_shape)
 
-        model_history = model.fit(train_dataset, validation_data=val_dataset, epochs=epochs)
+        model_history = model.fit(train_dataset, validation_data=val_dataset, epochs=epochs, verbose=0)
 
         print("Stacked BiLSTM Model training complete")
         # Save the model
         model.save('dota_lstm_model.keras')
         print("Model saved as 'dota_lstm_model.keras'")
 
+        print("Hyperparameter settings: \n", "train_size: ", train_size, "\n", "epochs: ", epochs, "\n", "batch_size: ", batch_size)
         test_loss, test_accuracy = model.evaluate(test_dataset, verbose=0)
         print('\nTest accuracy:', test_accuracy)
         print('\nLoss:', test_loss)
 
         precision_metric = tf.keras.metrics.Precision()
         for features, labels in test_dataset:
-            predictions = model.predict(features)
+            predictions = model.predict(features, verbose=0)
             precision_metric.update_state(labels, predictions)
         precision = precision_metric.result().numpy()
         print('\nPrecision:', precision)
 
         auc_metric = tf.keras.metrics.AUC()
         for features, labels in test_dataset:
-            predictions = model.predict(features)
+            predictions = model.predict(features, verbose=0)
             auc_metric.update_state(labels, predictions)
         roc_auc = auc_metric.result().numpy()
         print('\nROC AUC:', roc_auc)

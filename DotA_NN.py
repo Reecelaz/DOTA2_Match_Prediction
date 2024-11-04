@@ -11,6 +11,7 @@ from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
 import numpy as np
 
+
 class DotA_NN:
 
     input_variables = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id', 'players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 'players_9_isRadiant']
@@ -19,66 +20,31 @@ class DotA_NN:
         # Set up the strategy for multi-GPU support
         self.strategy = tf.distribute.MirroredStrategy()
         print('Number of devices: {}'.format(self.strategy.num_replicas_in_sync))
-
     
-    def one_hot_encode_heroes(self, X):
-        '''
-        hero_ids_radiant = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id']
-        hero_ids_dire = ['players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id']
-
-        encoded_features = pd.DataFrame(index=X.index)
-
-        # Iterate over each hero_id column
-        for hero_id_col in hero_id_columns:
-            # Extract the column and reshape it to a 2D array
-            hero_id_values = X[[hero_id_col]]
-            
-            # Create and fit a new encoder for this column
-            encoder = OneHotEncoder(categories=[range(1, 139)], sparse_output=False, handle_unknown='ignore')
-            one_hot_encoded = encoder.fit_transform(hero_id_values)
-            
-            # Create a DataFrame with the encoded values
-            one_hot_encoded_df = pd.DataFrame(one_hot_encoded, index=X.index)
-            
-            # Rename columns to identify which hero ID they belong to
-            one_hot_encoded_df.columns = [f"{hero_id_col}_hero_{i+1}" for i in range(one_hot_encoded_df.shape[1])]
-            
-            # Concatenate the encoded features with the original DataFrame
-            encoded_features = pd.concat([encoded_features, one_hot_encoded_df], axis=1)
+    def split_data(self, dataset, train_ratio=0.6, seed=42):
+        val_ratio = test_ratio = (1 - train_ratio) / 2
+        # Ensure ratios add up to 1.0
+        assert train_ratio + val_ratio + test_ratio == 1.0, "Ratios must sum to 1.0"
         
-        '''
-        hero_id_columns = [col for col in self.input_variables if 'hero_id' in col]
+        # Calculate dataset size
+        dataset_size = dataset.cardinality().numpy()
         
-        # Initialize an empty DataFrame to store encoded features
-        encoded_features = pd.DataFrame(index=X.index)
+        # Compute sizes based on ratios
+        train_size = int(train_ratio * dataset_size)
+        val_size = int(val_ratio * dataset_size)
 
-        # Iterate over each hero_id column
-        for hero_id_col in hero_id_columns:
-            # Extract the column and reshape it to a 2D array
-            hero_id_values = X[[hero_id_col]]
-            
-            # Create and fit a new encoder for this column
-            encoder = OneHotEncoder(categories=[range(1, 139)], sparse_output=False, handle_unknown='ignore')
-            one_hot_encoded = encoder.fit_transform(hero_id_values)
-            
-            # Create a DataFrame with the encoded values
-            one_hot_encoded_df = pd.DataFrame(one_hot_encoded, index=X.index)
-            
-            # Rename columns to identify which hero ID they belong to
-            one_hot_encoded_df.columns = [f"{hero_id_col}_hero_{i+1}" for i in range(one_hot_encoded_df.shape[1])]
-            
-            # Concatenate the encoded features with the original DataFrame
-            encoded_features = pd.concat([encoded_features, one_hot_encoded_df], axis=1)
+        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
         
-
-        # Include the non-hero ID features (e.g., 'isRadiant' columns)
-        non_hero_columns = [col for col in self.input_variables if 'hero_id' not in col]
-        X_encoded = pd.concat([encoded_features, X[non_hero_columns].reset_index(drop=True)], axis=1)
+        # Shuffle with a fixed seed for reproducibility
+        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=seed, reshuffle_each_iteration=True)
         
-        return X_encoded
-
-
-
+        # Create splits
+        train_dataset = dataset.take(train_size)
+        val_dataset = dataset.skip(train_size).take(val_size)
+        test_dataset = dataset.skip(train_size + val_size)
+        
+        return train_dataset, val_dataset, test_dataset
+    '''
     def split_data(self, dataset, train_size=0.6):
         print(f"Original dataset size: {dataset.cardinality().numpy()}")
         # Get the total number of elements in the dataset
@@ -107,6 +73,7 @@ class DotA_NN:
         print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
 
         return train_dataset, val_dataset, test_dataset
+    '''
 
     def build_model(self, input_size, learning_rate=0.001):
         hidden_layer_fn = 'relu'
@@ -200,13 +167,16 @@ class DotA_NN:
         'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 
         'players_9_isRadiant']
 
-        dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
-
-        # Storing first row in text file
-        self.inspect_first_row(dataset, output_file='first_row.txt')
-
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
+
+        #dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
+        train_dataset = self.create_one_hot_encoded_dataset(train_dataset, hero_id_columns, is_radiant_columns, 140)
+        val_dataset = self.create_one_hot_encoded_dataset(val_dataset, hero_id_columns, is_radiant_columns, 140)
+        test_dataset = self.create_one_hot_encoded_dataset(test_dataset, hero_id_columns, is_radiant_columns, 140)
+        
+        # Storing first row in text file
+        self.inspect_first_row(train_dataset, output_file='first_row.txt')
 
         # Check if the dataset is empty
         print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
@@ -229,13 +199,14 @@ class DotA_NN:
         model = self.build_model(input_size=next(iter(train_dataset))[0].shape[1], learning_rate=learning_rate)
         
         print("Begin model training")
-        model_history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset)
+        model_history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, verbose=0)
         
         print("Model training complete")
         # Save the model
         model.save('dota_nn_model.keras')
         print("Model saved as 'dota_nn_model.keras'")
 
+        print("Hyperparameter settings: \n", "train_size: ", train_size, "\n", "epochs: ", epochs, "\n", "batch_size: ", batch_size, "\n", "learning rate: ", learning_rate)
         test_loss, test_accuracy = model.evaluate(test_dataset, verbose=0)
         print('\nTest accuracy:', test_accuracy)
         print('\nLoss:', test_loss)

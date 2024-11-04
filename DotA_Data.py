@@ -23,6 +23,50 @@ class DotA_Data:
         except requests.RequestException as e:
             print(f"Error retrieving match IDs: {e}")
             return None
+
+    def process_teams_and_one_hot_encode(self, features, hero_id_columns, is_radiant_columns, num_heroes=140):
+        # Separate Radiant and Dire teams
+        radiant_hero_ids = []
+        dire_hero_ids = []
+
+        for i in range(len(hero_id_columns)):
+            # Get the actual index for the hero ID and isRadiant columns
+            hero_id = features[i]  # Get the hero_id for the current player
+            is_radiant = features[len(hero_id_columns) + i]  # Get the corresponding isRadiant value
+
+            # If the player is Radiant
+            if is_radiant == 1:
+                radiant_hero_ids.append(hero_id)
+            else:
+                dire_hero_ids.append(hero_id)
+
+        # One-hot encode hero_ids for both teams
+        radiant_one_hot = tf.one_hot(radiant_hero_ids, depth=num_heroes)
+        dire_one_hot = tf.one_hot(dire_hero_ids, depth=num_heroes)
+
+        # Combine Radiant and Dire one-hot encodings
+        one_hot_combined = tf.concat([radiant_one_hot, dire_one_hot], axis=0)
+        
+        return one_hot_combined
+
+    def create_one_hot_encoded_dataset(self, dataset, num_heroes=140):
+
+        hero_id_columns = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 
+        'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id']
+
+        is_radiant_columns = ['players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 
+        'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 
+        'players_9_isRadiant']
+
+        # Define a function to map and process each example in the dataset
+        def process_example(features, target):
+            one_hot_combined = self.process_teams_and_one_hot_encode(features, hero_id_columns, is_radiant_columns, num_heroes)
+            return one_hot_combined, target
+
+        # Apply the processing function to each batch in the dataset
+        encoded_dataset = dataset.map(lambda features, target: process_example(features, target))
+        
+        return encoded_dataset
     
     def getMatchData(self, match_id):
         matches_endpoint = f"https://api.opendota.com/api/matches/{match_id}?api_key={API_KEY}"
