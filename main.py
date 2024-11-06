@@ -20,8 +20,8 @@ def train_NN():
     matches = DotA_Data()
 
     #json_file_path = '/home-mscluster/rlazarus/flattened_postgre_dota_data.json'
-    #json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_postgre_dota_data.json'
-    json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
+    json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_postgre_dota_data.json'
+    #json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
     chunksize = 500
 
     input_variables = ['radiant_win', 'players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id', 'players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 'players_9_isRadiant']
@@ -30,62 +30,16 @@ def train_NN():
 
     print(f"Total matches in the dataset: {total_rows}")
 
-    ################## NN Hyperparameters ################
+    ################## NN Baseline Hyperparameters ################
     train_size = 0.6
-    epochs = 100
+    epochs = 150
     batch_size = 64
-    learning_rate = 0.001
+    learning_rate = 0.005
     
     ######################################################
     nn = DotA_NN()
     nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-
-    ############### train size testing #########################
-    print("############### Begin train size testing #########################")
-    train_size = 0.4
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    train_size = 0.8
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    train_size = 0.6 #Reset to original
-
-    ############### epoch number testing #######################
-    print("############### Begin epoch number testing #########################")
-    epochs = 20
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    epochs = 50
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    epochs = 150
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    epochs = 200
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    epochs = 300
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    epochs = 100 #Reset to original
-
-    ############### batch size testing #########################
-    print("############### Begin batch size testing #########################")
-    batch_size = 12
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    batch_size = 24
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    batch_size = 32
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    batch_size = 128
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    batch_size = 64 #Reset to original
-
-    ############### learning rate testing #######################
-    print("############### Begin learning rate testing #########################")
-    learning_rate = 0.005
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    learning_rate = 0.01
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    learning_rate = 0.1
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
-    learning_rate = 0.001 #Reset to original
-
-    print("############### ALL Neural Network TESTS COMPLETE #########################")
- 
+    
 def train_BiLSTM():
     matches = DotA_Data()
 
@@ -100,50 +54,14 @@ def train_BiLSTM():
 
     print(f"Total matches in the dataset: {total_rows}")
 
-    ################## Stacked BiLSTM Hyperparameters ################
-    train_size = 0.6
+    ################## Stacked BiLSTM Baseline Hyperparameters ################
+    train_size = 0.8
     epochs = 200
     batch_size = 64
     
     ######################################################
     lstm = DotA_Stacked_BiLSTM()
     lstm.train(dataset, train_size, epochs, batch_size)
-    '''
-    ############### train size testing #########################
-    print("############### Begin train size testing #########################")
-    train_size = 0.4
-    lstm.train(dataset, train_size, epochs, batch_size)
-    train_size = 0.8
-    lstm.train(dataset, train_size, epochs, batch_size)
-    train_size = 0.6 #Reset to original
-
-    ############### epoch number testing #######################
-    print("############### Begin epoch number testing #########################")
-    epochs = 20
-    lstm.train(dataset, train_size, epochs, batch_size)
-    epochs = 50
-    lstm.train(dataset, train_size, epochs, batch_size)
-    epochs = 150
-    lstm.train(dataset, train_size, epochs, batch_size)
-    epochs = 200
-    lstm.train(dataset, train_size, epochs, batch_size)
-    epochs = 300
-    lstm.train(dataset, train_size, epochs, batch_size)
-    epochs = 100 #Reset to original
-
-    ############### batch size testing #########################
-    print("############### Begin batch size testing #########################")
-    batch_size = 12
-    lstm.train(dataset, train_size, epochs, batch_size)
-    batch_size = 24
-    lstm.train(dataset, train_size, epochs, batch_size)
-    batch_size = 32
-    lstm.train(dataset, train_size, epochs, batch_size)
-    batch_size = 128
-    lstm.train(dataset, train_size, epochs, batch_size)
-    batch_size = 64 #Reset to original
-    '''
-    print("############### ALL Stacked BiLSTM TESTS COMPLETE #########################")
 
 
 def postgreSqlExplorer():
