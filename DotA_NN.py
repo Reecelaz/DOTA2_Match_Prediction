@@ -33,48 +33,13 @@ class DotA_NN:
         train_size = int(train_ratio * dataset_size)
         val_size = int(val_ratio * dataset_size)
 
-        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
-        
-        # Shuffle with a fixed seed for reproducibility
-        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=seed, reshuffle_each_iteration=True)
-        
-        # Create splits
+        #Split dataset using sizes
         train_dataset = dataset.take(train_size)
         val_dataset = dataset.skip(train_size).take(val_size)
         test_dataset = dataset.skip(train_size + val_size)
         
         return train_dataset, val_dataset, test_dataset
-    '''
-    def split_data(self, dataset, train_size=0.6):
-        print(f"Original dataset size: {dataset.cardinality().numpy()}")
-        # Get the total number of elements in the dataset
-        dataset_size = dataset.cardinality().numpy()
-
-        if dataset_size == 0:
-            raise ValueError("The dataset is empty")
-
-        # Compute sizes for train, validation, and test sets
-        train_size = int(train_size * dataset_size)
-        val_test_size = dataset_size - train_size
-        val_size = test_size = val_test_size // 2
-
-        # Shuffle the dataset first to randomize
-        dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
-
-        # Split the dataset: train, validation, and test
-        train_dataset = dataset.take(train_size)
-        remaining_dataset = dataset.skip(train_size)
-        val_dataset = remaining_dataset.take(val_size)
-        test_dataset = remaining_dataset.skip(val_size)
-
-        # Print sizes for verification
-        print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
-        print(f"Val dataset size: {val_dataset.cardinality().numpy()}")
-        print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
-
-        return train_dataset, val_dataset, test_dataset
-    '''
-
+    
     def build_model(self, input_size, learning_rate=0.001):
         hidden_layer_fn = 'relu'
         with self.strategy.scope():
@@ -102,42 +67,6 @@ class DotA_NN:
         plt.xlabel('epoch')
         plt.savefig('NN accuracy_vs_epochs.png')
 
-    def process_teams_and_one_hot_encode(self, features, hero_id_columns, is_radiant_columns, num_heroes=140):
-        # Separate Radiant and Dire teams
-        radiant_hero_ids = []
-        dire_hero_ids = []
-
-        for i in range(len(hero_id_columns)):
-            # Get the actual index for the hero ID and isRadiant columns
-            hero_id = features[i]  # Get the hero_id for the current player
-            is_radiant = features[len(hero_id_columns) + i]  # Get the corresponding isRadiant value
-
-            # If the player is Radiant
-            if is_radiant == 1:
-                radiant_hero_ids.append(hero_id)
-            else:
-                dire_hero_ids.append(hero_id)
-
-        # One-hot encode hero_ids for both teams
-        radiant_one_hot = tf.one_hot(radiant_hero_ids, depth=num_heroes)
-        dire_one_hot = tf.one_hot(dire_hero_ids, depth=num_heroes)
-
-        # Combine Radiant and Dire one-hot encodings
-        one_hot_combined = tf.concat([radiant_one_hot, dire_one_hot], axis=0)
-        
-        return one_hot_combined
-
-    def create_one_hot_encoded_dataset(self, dataset, hero_id_columns, is_radiant_columns, num_heroes=140):
-        # Define a function to map and process each example in the dataset
-        def process_example(features, target):
-            one_hot_combined = self.process_teams_and_one_hot_encode(features, hero_id_columns, is_radiant_columns, num_heroes)
-            return one_hot_combined, target
-
-        # Apply the processing function to each batch in the dataset
-        encoded_dataset = dataset.map(lambda features, target: process_example(features, target))
-        
-        return encoded_dataset
-
     def inspect_first_row(self, dataset, output_file='first_row.txt'):
         # Take the first element from the dataset
         first_row = next(iter(dataset.take(1)))
@@ -158,6 +87,7 @@ class DotA_NN:
         print(f"First row saved to {output_file}")
 
     def train(self, dataset, train_size, epochs, batch_size, learning_rate):
+        self.inspect_first_row(dataset, output_file='first_row.txt')
         print("Encoding hero columns")
 
         hero_id_columns = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 
@@ -170,13 +100,7 @@ class DotA_NN:
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
 
-        #dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
-        train_dataset = self.create_one_hot_encoded_dataset(train_dataset, hero_id_columns, is_radiant_columns, 140)
-        val_dataset = self.create_one_hot_encoded_dataset(val_dataset, hero_id_columns, is_radiant_columns, 140)
-        test_dataset = self.create_one_hot_encoded_dataset(test_dataset, hero_id_columns, is_radiant_columns, 140)
-        
-        # Storing first row in text file
-        self.inspect_first_row(train_dataset, output_file='first_row.txt')
+        self.inspect_first_row(train_dataset, output_file='first_row_after_split.txt')
 
         # Check if the dataset is empty
         print(f"Train dataset size: {train_dataset.cardinality().numpy()}")

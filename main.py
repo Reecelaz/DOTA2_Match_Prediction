@@ -22,13 +22,26 @@ def train_NN():
     #json_file_path = '/home-mscluster/rlazarus/flattened_postgre_dota_data.json'
     json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_postgre_dota_data.json'
     #json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
-    chunksize = 500
 
-    input_variables = ['radiant_win', 'players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id', 'players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 'players_9_isRadiant']
+    chunksize = 100
 
-    dataset, total_rows = matches.getDataset(json_file_path=json_file_path, chunksize=chunksize, input_variables=input_variables)
+    hero_id_columns = [
+    'players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id',
+    'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id'
+    ]
+    is_radiant_columns = [
+        'players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 'players_4_isRadiant',
+        'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 'players_9_isRadiant'
+    ]
 
-    print(f"Total matches in the dataset: {total_rows}")
+    # Load and prepare the dataset
+    dota_data = DotA_Data()
+    one_hot_encoded_dataset = dota_data.prepare_dataset(
+        dataset_path=json_file_path,
+        hero_id_columns=hero_id_columns,
+        is_radiant_columns=is_radiant_columns,
+        chunksize=chunksize
+    )
 
     ################## NN Baseline Hyperparameters ################
     train_size = 0.6
@@ -36,9 +49,9 @@ def train_NN():
     batch_size = 64
     learning_rate = 0.005
     
-    ######################################################
+    ###############################################################
     nn = DotA_NN()
-    nn.train(dataset, train_size, epochs, batch_size, learning_rate)
+    nn.train(one_hot_encoded_dataset, train_size, epochs, batch_size, learning_rate)
     
 def train_BiLSTM():
     matches = DotA_Data()
