@@ -1,11 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Bidirectional, Dropout, TimeDistributed
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
-
-import pandas as pd
+from tensorflow.keras.layers import Dense, LSTM, Bidirectional, Dropout
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -16,36 +11,8 @@ class DotA_Stacked_BiLSTM:
         # Set up the strategy for multi-GPU support
         self.strategy = tf.distribute.MirroredStrategy()
         print('Number of devices: {}'.format(self.strategy.num_replicas_in_sync))
-    '''
-    def build_model(self, input_size):
-        with self.strategy.scope():
-            # Build the Stacked Bidirectional LSTM Model with dynamic input dimensions
-            model = Sequential()
+        print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
-            # Add first Bidirectional LSTM layer (timesteps is dynamic)
-            model.add(Bidirectional(LSTM(140, return_sequences=True), input_shape=(None, input_size)))
-            model.add(Dropout(0.2))
-
-            # Add second Bidirectional LSTM layer
-            model.add(Bidirectional(LSTM(140, return_sequences=True)))  # Keep return_sequences=True to retain sequence data
-            model.add(Dropout(0.2))
-
-            # Use TimeDistributed to apply Dense to each time step in the sequence
-            model.add(TimeDistributed(Dense(64, activation='relu')))  # Apply Dense layer to each time step
-
-            # Add a Dense output layer for binary classification
-            model.add(TimeDistributed(Dense(1, activation='sigmoid')))  # Sigmoid for binary output across timesteps
-
-            # Compile the model
-            model.compile(optimizer='adam',
-                        loss='binary_crossentropy',  # Binary classification loss
-                        metrics=['accuracy'])
-
-        # Print the model summary
-        model.summary()
-
-        return model
-    '''
     def build_model(self, input_shape):
         with self.strategy.scope():
             model = Sequential()
@@ -54,7 +21,7 @@ class DotA_Stacked_BiLSTM:
             input_feature_size = input_shape[-1]  # Get the feature dimension from the input shape
 
             # Add first Bidirectional LSTM layer with units matching input feature size
-            model.add(Bidirectional(LSTM(input_feature_size, return_sequences=True), input_shape=input_shape))
+            model.add(Bidirectional(LSTM(input_feature_size, return_sequences=True), input_shape=(None, input_feature_size)))
             model.add(Dropout(0.01))
 
             # Add second Bidirectional LSTM layer
@@ -69,7 +36,6 @@ class DotA_Stacked_BiLSTM:
                         loss='binary_crossentropy',
                         metrics=['accuracy'])
 
-
         return model
 
     def split_data(self, dataset, train_ratio=0.6, seed=42):
@@ -83,11 +49,6 @@ class DotA_Stacked_BiLSTM:
         # Compute sizes based on ratios
         train_size = int(train_ratio * dataset_size)
         val_size = int(val_ratio * dataset_size)
-
-        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
-        
-        # Shuffle with a fixed seed for reproducibility
-        #dataset = dataset.shuffle(buffer_size=dataset_size, seed=seed, reshuffle_each_iteration=True)
         
         # Create splits
         train_dataset = dataset.take(train_size)
@@ -95,73 +56,25 @@ class DotA_Stacked_BiLSTM:
         test_dataset = dataset.skip(train_size + val_size)
         
         return train_dataset, val_dataset, test_dataset
-    '''
-    #Original Split Function
 
-    def split_data(self, dataset, train_size=0.6):
-        print(f"Original dataset size: {dataset.cardinality().numpy()}")
-        # Get the total number of elements in the dataset
-        dataset_size = dataset.cardinality().numpy()
-
-        if dataset_size == 0:
-            raise ValueError("The dataset is empty")
-
-        # Compute sizes for train, validation, and test sets
-        train_size = int(train_size * dataset_size)
-        val_test_size = dataset_size - train_size
-        val_size = test_size = val_test_size // 2
-
-        # Shuffle the dataset first to randomize
-        dataset = dataset.shuffle(buffer_size=dataset_size, seed=42)
-
-        # Split the dataset: train, validation, and test
-        train_dataset = dataset.take(train_size)
-        remaining_dataset = dataset.skip(train_size)
-        val_dataset = remaining_dataset.take(val_size)
-        test_dataset = remaining_dataset.skip(val_size)
-
-        # Print sizes for verification
-        print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
-        print(f"Val dataset size: {val_dataset.cardinality().numpy()}")
-        print(f"Test dataset size: {test_dataset.cardinality().numpy()}")
-
-        return train_dataset, val_dataset, test_dataset
-    '''
-    def process_teams_and_one_hot_encode(self, features, hero_id_columns, is_radiant_columns, num_heroes=140):
-        # Separate Radiant and Dire teams
-        radiant_hero_ids = []
-        dire_hero_ids = []
-
-        for i in range(len(hero_id_columns)):
-            # Get the actual index for the hero ID and isRadiant columns
-            hero_id = features[i]  # Get the hero_id for the current player
-            is_radiant = features[len(hero_id_columns) + i]  # Get the corresponding isRadiant value
-
-            # If the player is Radiant
-            if is_radiant == 1:
-                radiant_hero_ids.append(hero_id)
-            else:
-                dire_hero_ids.append(hero_id)
-
-        # One-hot encode hero_ids for both teams
-        radiant_one_hot = tf.one_hot(radiant_hero_ids, depth=num_heroes)
-        dire_one_hot = tf.one_hot(dire_hero_ids, depth=num_heroes)
-
-        # Combine Radiant and Dire one-hot encodings
-        one_hot_combined = tf.concat([radiant_one_hot, dire_one_hot], axis=0)
+    def inspect_first_row(self, dataset, output_file='first_row.txt'):
+        # Take the first element from the dataset
+        first_row = next(iter(dataset.take(1)))
         
-        return one_hot_combined
-
-    def create_one_hot_encoded_dataset(self, dataset, hero_id_columns, is_radiant_columns, num_heroes=140):
-        # Define a function to map and process each example in the dataset
-        def process_example(features, target):
-            one_hot_combined = self.process_teams_and_one_hot_encode(features, hero_id_columns, is_radiant_columns, num_heroes)
-            return one_hot_combined, target
-
-        # Apply the processing function to each batch in the dataset
-        encoded_dataset = dataset.map(lambda features, target: process_example(features, target))
+        features, label = first_row  # Unpack the features and the label
         
-        return encoded_dataset
+        # Convert the Tensors to NumPy arrays for easier reading
+        features_np = features.numpy()
+        label_np = label.numpy()
+
+        # Write the values to a text file
+        with open(output_file, 'w') as f:
+            f.write("Features (X):\n")
+            np.savetxt(f, features_np, fmt='%s')
+            f.write("\nLabel (y):\n")
+            f.write(f"{label_np}\n")
+
+        print(f"First row saved to {output_file}")
 
     def plot_accuracy_vs_epochs(self, model_history):
         plt.plot(model_history.history['accuracy'])
@@ -171,22 +84,10 @@ class DotA_Stacked_BiLSTM:
         plt.savefig('LSTM accuracy_vs_epochs.png')
 
     def train(self, dataset, train_size, epochs, batch_size):
-        print("Encoding hero columns")
-
-        hero_id_columns = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 
-        'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id']
-
-        is_radiant_columns = ['players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 
-        'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 
-        'players_9_isRadiant']
-
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
 
-        #dataset = self.create_one_hot_encoded_dataset(dataset, hero_id_columns, is_radiant_columns, 140)
-        train_dataset = self.create_one_hot_encoded_dataset(train_dataset, hero_id_columns, is_radiant_columns, 140)
-        val_dataset = self.create_one_hot_encoded_dataset(val_dataset, hero_id_columns, is_radiant_columns, 140)
-        test_dataset = self.create_one_hot_encoded_dataset(test_dataset, hero_id_columns, is_radiant_columns, 140)
+        self.inspect_first_row(train_dataset, output_file='first_row_after_split_lstm.txt')
 
         # Check if the dataset is empty
         print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
@@ -206,10 +107,17 @@ class DotA_Stacked_BiLSTM:
         val_dataset = val_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
         test_dataset = test_dataset.batch(batch_size, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
 
-        input_shape = next(iter(train_dataset))[0].shape[1:]
+        input_shape = next(iter(train_dataset))[0].shape[1:]  # Get input shape from the first batch
         print(f"Dynamically inferred input shape: {input_shape}")
-        model = self.build_model(input_shape=input_shape)
 
+        # Ensure the input data has the sequence dimension (adding a dummy sequence dimension if needed)
+        train_dataset = train_dataset.map(lambda x, y: (tf.expand_dims(x, 1), y))  # Adding sequence length dimension (1)
+        val_dataset = val_dataset.map(lambda x, y: (tf.expand_dims(x, 1), y))  # Same for validation data
+        test_dataset = test_dataset.map(lambda x, y: (tf.expand_dims(x, 1), y))  # Same for test data
+
+        model = self.build_model(input_shape)
+
+        print("Begin Training")
         model_history = model.fit(train_dataset, validation_data=val_dataset, epochs=epochs, verbose=0)
 
         print("Stacked BiLSTM Model training complete")
@@ -237,3 +145,5 @@ class DotA_Stacked_BiLSTM:
         print('\nROC AUC:', roc_auc)
 
         self.plot_accuracy_vs_epochs(model_history)
+
+        return test_accuracy, roc_auc, precision, test_loss 

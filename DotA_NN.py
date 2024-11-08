@@ -20,6 +20,7 @@ class DotA_NN:
         # Set up the strategy for multi-GPU support
         self.strategy = tf.distribute.MirroredStrategy()
         print('Number of devices: {}'.format(self.strategy.num_replicas_in_sync))
+        print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
     
     def split_data(self, dataset, train_ratio=0.6, seed=42):
         val_ratio = test_ratio = (1 - train_ratio) / 2
@@ -88,15 +89,7 @@ class DotA_NN:
 
     def train(self, dataset, train_size, epochs, batch_size, learning_rate):
         self.inspect_first_row(dataset, output_file='first_row.txt')
-        print("Encoding hero columns")
-
-        hero_id_columns = ['players_0_hero_id', 'players_1_hero_id', 'players_2_hero_id', 'players_3_hero_id', 'players_4_hero_id', 
-        'players_5_hero_id', 'players_6_hero_id', 'players_7_hero_id', 'players_8_hero_id', 'players_9_hero_id']
-
-        is_radiant_columns = ['players_0_isRadiant', 'players_1_isRadiant', 'players_2_isRadiant', 'players_3_isRadiant', 
-        'players_4_isRadiant', 'players_5_isRadiant', 'players_6_isRadiant', 'players_7_isRadiant', 'players_8_isRadiant', 
-        'players_9_isRadiant']
-
+        
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
 
@@ -150,3 +143,5 @@ class DotA_NN:
         print('\nROC AUC:', roc_auc)
 
         self.plot_accuracy_vs_epochs(model_history)
+
+        return test_accuracy, roc_auc, precision, test_loss
