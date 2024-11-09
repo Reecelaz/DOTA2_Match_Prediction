@@ -9,9 +9,9 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-json_file_path = '/home-mscluster/rlazarus/flattened_postgre_dota_data.json'
+#json_file_path = '/home-mscluster/rlazarus/flattened_postgre_dota_data.json'
 #json_file_path = '/home-mscluster/rlazarus/flattened_dota_data.json'
-#json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_postgre_dota_data.json'
+json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_postgre_dota_data.json'
 #json_file_path = 'C:/Users/Reece Lazarus/DOTA2_Match_Prediction/flattened_dota_data.json'
 
 hero_id_columns = [
@@ -244,6 +244,7 @@ def train_NN():
     learning_rate = 0.005
     
     ###############################################################
+    print("Neural Network with all features")
     nn = DotA_NN()
     nn.train(one_hot_encoded_dataset, train_size, epochs, batch_size, learning_rate)
     
@@ -266,6 +267,7 @@ def train_BiLSTM():
     batch_size = 64
     
     ######################################################
+    print("Stacked BiLSTM with all features")
     lstm = DotA_Stacked_BiLSTM()
     lstm.train(one_hot_encoded_dataset, train_size, epochs, batch_size)
 
@@ -376,9 +378,9 @@ def evaluateTrainedModels():
 def main():
     #postgreSqlExplorer()
     #data()
-    #train_NN()
-    #train_BiLSTM()
-    evaluateModels()
+    train_NN()
+    train_BiLSTM()
+    #evaluateModels()
     #evaluateTrainedModels()
     
 if __name__ == "__main__":
