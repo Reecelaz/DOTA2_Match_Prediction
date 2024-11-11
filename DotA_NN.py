@@ -88,12 +88,12 @@ class DotA_NN:
         print(f"First row saved to {output_file}")
 
     def train(self, dataset, train_size, epochs, batch_size, learning_rate):
-        self.inspect_first_row(dataset, output_file='first_row.txt')
+        #self.inspect_first_row(dataset, output_file='first_row.txt')
         
         print("Splitting data")
         train_dataset, val_dataset, test_dataset = self.split_data(dataset, train_size)
 
-        self.inspect_first_row(train_dataset, output_file='first_row_after_split.txt')
+        #self.inspect_first_row(train_dataset, output_file='first_row_after_split.txt')
 
         # Check if the dataset is empty
         print(f"Train dataset size: {train_dataset.cardinality().numpy()}")
